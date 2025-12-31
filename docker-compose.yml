@@ -1,0 +1,34 @@
+version: '3.11'
+
+services:
+  db:
+    image: summerpillow/zzikgo_db:latest
+    environment:
+      POSTGRES_USER: zzikgo_user
+      POSTGRES_PASSWORD: example_password
+      POSTGRES_DB:   zzikgo_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zzikgo_user"]
+      interval: 5s
+      retries: 5
+
+  app:
+    image: summerpillow/zzikgo_app:latest   # build: . 제거!
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=zzikgo_user
+      - DB_PASS=example_password
+      - DB_NAME=zzikgo_db
+    ports:
+      - "8000:8000"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+volumes:
+  db-data:

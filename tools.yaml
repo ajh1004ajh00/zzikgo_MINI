@@ -1,0 +1,93 @@
+sources:
+  my-pg-source:
+    kind: postgres
+    host: 127.0.0.1
+    port: 5432
+    database: postgres
+    user: example_user
+    password: "${DB_PASS}"
+
+tools:
+  # Create (INSERT)
+  create-user:
+    kind: postgres-sql
+    source: my-pg-source
+    description: Create a new user with given fields; id and created_at, max_storage_mb are generated automatically.
+    parameters:
+      - name: platform_id
+        type: string
+        description: Platform ID.
+      - name: platform_user_id
+        type: string
+        description: Platform user ID.
+    statement: |
+      INSERT INTO users(
+        id,
+        platform_id,
+        platform_user_id,
+        created_at,
+        max_storage_mb
+      ) VALUES (
+        substring(md5(random()::text),1,10),
+        $1,
+        $2,
+        NOW(),
+        10240
+      );
+
+  # Read (SELECT)
+  search-user:
+    kind: postgres-sql
+    source: my-pg-source
+    description: Search users by id or platform_user_id.
+    parameters:
+      - name: query
+        type: string
+        description: Partial ID or platform_user_id.
+    statement: |
+      SELECT
+        id,
+        platform_id,
+        platform_user_id,
+        created_at,
+        max_storage_mb
+      FROM users
+      WHERE id ILIKE '%'||$1||'%'
+         OR platform_user_id ILIKE '%'||$1||'%';
+
+  # Update (UPDATE)
+  update-user-storage:
+    kind: postgres-sql
+    source: my-pg-source
+    description: Update a user’s max storage.
+    parameters:
+      - name: id
+        type: string
+        description: User ID to update.
+      - name: max_storage_mb
+        type: integer
+        description: New max storage in MB.
+    statement: |
+      UPDATE users
+      SET max_storage_mb = $2
+      WHERE id = $1;
+
+  # Delete (DELETE)
+  delete-user:
+    kind: postgres-sql
+    source: my-pg-source
+    description: Delete a user by ID.
+    parameters:
+      - name: id
+        type: string
+        description: User ID to delete.
+    statement: |
+      DELETE FROM users
+      WHERE id = $1;
+
+toolsets:
+  user-toolset:
+    - create-user
+    - search-user
+    - update-user-storage
+    - delete-user

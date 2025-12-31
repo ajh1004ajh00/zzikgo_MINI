@@ -1,6 +1,6 @@
 import shortuuid
 
-from sqlalchemy             import Column, String
+from sqlalchemy             import Column, String, DateTime
 
 from app.database.engine    import Base
 
@@ -11,7 +11,10 @@ class Platform(Base):
     id = Column(String, primary_key=True, unique=True)
     platform = Column(String)
     created_at = Column(String)
-    updated_at = Column(String)    
+    updated_at = Column(String)
+    # created_at = Column(DateTime(timezone=True), nullable=False)
+    # updated_at = Column(DateTime(timezone=True), nullable=False)
+
     
     def __init__(self, platform, created_at, updated_at):
         self.id = shortuuid.ShortUUID().random(length=10)
