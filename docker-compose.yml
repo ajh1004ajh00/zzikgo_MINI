@@ -1,34 +1,32 @@
-version: '3.11'
-
 services:
   db:
-    image: summerpillow/zzikgo_db:latest
+    image: postgres:17
     environment:
-      POSTGRES_USER: zzikgo_user
-      POSTGRES_PASSWORD: example_password
-      POSTGRES_DB:   zzikgo_db
+      POSTGRES_USER: ${DB_USER:-example_user}
+      POSTGRES_PASSWORD: ${DB_PASS:?Set DB_PASS in .env}
+      POSTGRES_DB: ${DB_NAME:-example_db}
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
+      - ./db-image/example.sql:/docker-entrypoint-initdb.d/01-example.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U zzikgo_user"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
-      retries: 5
-
+      retries: 10
   app:
-    image: summerpillow/zzikgo_app:latest   # build: . 제거!
+    build: .
     depends_on:
       db:
         condition: service_healthy
     environment:
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_USER=zzikgo_user
-      - DB_PASS=example_password
-      - DB_NAME=zzikgo_db
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-example_user}
+      DB_PASS: ${DB_PASS:?Set DB_PASS in .env}
+      DB_NAME: ${DB_NAME:-example_db}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env}
     ports:
-      - "8000:8000"
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+      - "127.0.0.1:8000:8000"
 volumes:
   db-data:

@@ -1,1 +1,12 @@
 toolbox
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.DS_Store
+*.db
+*.sqlite*
+postgres_data/
+db-image/dump.sql
+.venv/

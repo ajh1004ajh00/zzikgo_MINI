@@ -1,0 +1,6 @@
+.git
+.env
+*.db
+*.sqlite*
+postgres_data
+**/__pycache__

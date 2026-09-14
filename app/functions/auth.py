@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from app.schemas.error import CustomErrorException
 from app.schemas._global    import TokenPayload, UserTokenPayload, PlatformTokenPayload
 
-SECRET_KEY = "example_only_change_me"
+SECRET_KEY = os.environ["JWT_SECRET_KEY"]
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
 REFRESH_TOKEN_EXPIRE_DAYS = 7

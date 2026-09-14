@@ -2,8 +2,8 @@ sources:
   my-pg-source:
     kind: postgres
     host: 127.0.0.1
-    port: 5432
-    database: postgres
+    port: 5433
+    database: example_db
     user: example_user
     password: "${DB_PASS}"
 
