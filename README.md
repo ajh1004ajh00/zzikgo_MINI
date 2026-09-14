@@ -1,14 +1,52 @@
 # 집찍고 MINI · 백엔드 실습
 
-집찍고 도메인을 바탕으로 FastAPI·SQLAlchemy·PostgreSQL을 학습한 작은 실습 저장소입니다.
-실제 운영 서비스 코드나 폴더 순환 참조 장애 수정본 전체를 공개한 저장소는 아닙니다.
+**집찍고 백엔드의 데이터 모델과 일부 API 구조를 활용해, 서버 실행부터 인증·DB 마이그레이션·컨테이너 구성까지 실습한 프로젝트입니다.**
 
-## 살펴볼 내용
+스팩스페이스 현장실습 초기인 **2025년 6~7월**, 제공받은 MINI 베이스 코드를 분석하고 기능을 확장했습니다.
+각 단계에서 기술의 역할, 발생한 오류와 해결 과정, 실제 집찍고 코드와의 차이를 정리해 발표했습니다.
+운영 앱 전체나 이후 수행한 폴더 순환 참조·휴지통 장애 수정본을 담은 저장소는 아닙니다.
 
-- 플랫폼·사용자 등록과 JWT 발급·해석 흐름
-- 사용자·폴더·이미지 등 데이터 모델과 관계
-- Item API, SQLAlchemy 조회 및 Alembic 마이그레이션 기록
-- 별도 `tool_agent.py`와 `tools.yaml`의 DB 도구 연동 실습
+## 실습 흐름
+
+| 단계 | 진행한 내용 | 관련 코드 |
+| --- | --- | --- |
+| 1. 서버 구조 | FastAPI·Uvicorn 실행, 라우터 연결과 요청·응답 흐름 분석, Swagger UI·Postman 테스트 | [main.py](app/main.py), [라우터 연결](app/routes/__init__.py) |
+| 2. DB 연동 | SQLite 연결 확인 후 로컬 PostgreSQL 구성, Engine·Session·모델 관계 이해 | [engine.py](app/database/engine.py), [get_db.py](app/database/get_db.py), [models](app/models) |
+| 3. CRUD·스키마 | 사용자 API 확장, Item 생성·조회 실습, Pydantic 응답 검증과 직렬화 확인 | [user.py](app/routes/user.py), [item.py](app/routes/item.py), [schemas](app/schemas) |
+| 4. 인증 | Access·Refresh 토큰 발급, Bearer 헤더 처리, `perm`에 따른 플랫폼·사용자 권한 분기 | [auth.py](app/functions/auth.py), [platform.py](app/routes/platform.py) |
+| 5. 마이그레이션 | 모델 컬럼 변경, Alembic 리비전·upgrade·downgrade 실습, 기존 데이터 보정 | [alembic/versions](alembic/versions) |
+| 6. 컨테이너 | Dockerfile 작성, 앱·DB 컨테이너 분리, Compose 네트워크·볼륨·기동 순서 구성 | [Dockerfile](Dockerfile), [docker-compose.yml](docker-compose.yml) |
+
+현재 API는 `/api/users`, `/api/platforms`, `/api/items` 중심입니다.
+폴더·이미지·파일·메모·통계 모델은 데이터 관계를 이해하는 기반으로 포함되어 있습니다.
+
+```mermaid
+flowchart LR
+    Client[Swagger UI / Postman] --> Router[FastAPI Router]
+    Router --> Auth[JWT · Bearer 처리]
+    Auth --> Session[SQLAlchemy Session]
+    Session <--> DB[(PostgreSQL)]
+    Session --> Response[Pydantic 응답 모델]
+    Response --> Client
+```
+
+인증은 해당 의존성이 지정된 API에 적용됩니다. 플랫폼 최초 생성 경로는 실습을 위해 단순화했습니다.
+
+## 실습에서 다룬 문제
+
+- **요청 경로와 응답 모델:** 루트(`/`)의 404를 라우터·prefix 설정으로 확인하고 `/docs`에서 API를 테스트했습니다. Pydantic v2의 `from_attributes` 설정과 모델·스키마 사이 날짜 타입 불일치를 살펴봤습니다.
+- **인증 형식과 권한의 분리:** 역할 이름을 헤더 접두사로 사용하는 방식에서 Bearer 헤더를 처리하고, 토큰 내부 `perm`으로 권한을 구분하는 흐름을 구현했습니다.
+- **마이그레이션 상태 불일치:** `stamp`가 실제 스키마를 바꾸지 않는다는 점을 오류를 통해 확인하고, 리비전 표시와 `upgrade`·`downgrade`의 차이를 정리했습니다.
+- **컨테이너의 DB 연결:** 컨테이너 내부 `localhost`가 호스트 DB를 가리키지 않는 문제를 분석했습니다. 호스트 연결 방식과 Compose의 `DB_HOST=db` 서비스 이름 연결 방식을 실습했습니다.
+
+날짜 타입 통일 등 발표에서 제안한 개선안이 모두 현재 코드에 반영된 것은 아닙니다.
+
+## 추가 실습 · 자연어 DB 도구
+
+[tool_agent.py](tool_agent.py)와 [tools.yaml](tools.yaml)은 Google ADK·Toolbox for Databases를 이용한 별도 실험입니다.
+사용자 CRUD를 SQL 도구로 정의하고 자연어 요청으로 사용자를 검색하는 흐름을 확인했습니다.
+SQL 도구 안에서 Python 함수를 직접 사용할 수 없는 제약과 연동 오류도 기록했습니다.
+기본 FastAPI 서비스와는 별도로 실행하는 프로토타입입니다.
 
 ## 로컬 실행
 
@@ -40,3 +78,9 @@ AI 도구 실습은 별도의 Google API 키와 ADK·Toolbox 실행 환경이 �
 `python scripts/build_example.py --check`로 모델 스키마와 예제 SQL의 일치 여부,
 가상 데이터 입력과 외래키 관계를 메모리 SQLite에서 검사할 수 있습니다.
 공개 준비 시 이 검사는 통과했으며, Docker·PostgreSQL 컨테이너 실행은 별도 검증이 필요합니다.
+
+## 작성 근거
+
+Notion의 `SFACSPACE → 6~7월 DO List`에 남긴 **집찍고 실습 Step 1~6**, **Step 1~6 발표**,
+**집찍고 총 정리**, **Toolbox for Databases** 기록과 현재 저장소 코드를 대조해 작성했습니다.
+당시 실습 기록과 현재 공개용 환경의 검증 결과는 구분했습니다.
